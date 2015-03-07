@@ -20,10 +20,14 @@
 package org.sonar.plugins.dotnet.tests;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sonar.api.test.TestCase;
 
 import java.io.File;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class VisualStudioTestResultsFileParser implements UnitTestResultsParser {
 
@@ -61,11 +65,23 @@ public class VisualStudioTestResultsFileParser implements UnitTestResultsParser 
       }
     }
 
+    private void checkRootTag() {
+      xmlParserHelper.checkRootTag("TestRun");
+    }
+
     private void dispatchTags() {
       String tagName;
       while ((tagName = xmlParserHelper.nextTag()) != null) {
         if ("Counters".equals(tagName)) {
           handleCountersTag();
+        }
+
+        if ("UnitTestResult".equals(tagName)) {
+          addTestResult();
+        }
+
+        if ("UnitTest".equals(tagName)) {
+          addTestData();
         }
       }
     }
@@ -79,19 +95,65 @@ public class VisualStudioTestResultsFileParser implements UnitTestResultsParser 
       int timeout = xmlParserHelper.getRequiredIntAttribute("timeout");
       int aborted = xmlParserHelper.getRequiredIntAttribute("aborted");
 
-      int inconclusive = xmlParserHelper.getRequiredIntAttribute("inconclusive");
+      int skipped = xmlParserHelper.getRequiredIntAttribute("inconclusive");
 
       int tests = passed + failed + errors + timeout + aborted;
-      int skipped = inconclusive;
       int failures = timeout + failed + aborted;
 
       unitTestResults.add(tests, passed, skipped, failures, errors);
     }
 
-    private void checkRootTag() {
-      xmlParserHelper.checkRootTag("TestRun");
+    private void addTestResult() {
+      String id = xmlParserHelper.getRequiredAttribute("testId");
+      String name = xmlParserHelper.getRequiredAttribute("testName");
+      String durationFormatted = xmlParserHelper.getRequiredAttribute("duration");
+      String resultFormatted = xmlParserHelper.getRequiredAttribute("outcome"); // Passed, Failed
+
+      TestCase.Status result = resultFormatted.compareToIgnoreCase("Passed") == 0 ? TestCase.Status.OK : TestCase.Status.ERROR;
+      long milliseconds = parseDurationInMilliseconds(durationFormatted);
+
+      unitTestResults.addTestResult(id, name, milliseconds, result);
     }
 
-  }
+    private static Pattern pattern = Pattern.compile("(\\d{2}):(\\d{2}):(\\d{2}).(\\d{3})");
 
+    public static long parseDurationInMilliseconds(String period) {
+      period = period.substring(0, 2 + 1 + 2 + 1 + 2 + 1 + 3);
+      Matcher matcher = pattern.matcher(period);
+      if (matcher.matches()) {
+        return Long.parseLong(matcher.group(1)) * 3600000L
+                + Long.parseLong(matcher.group(2)) * 60000
+                + Long.parseLong(matcher.group(3)) * 1000
+                + Long.parseLong(matcher.group(4));
+      } else {
+        throw new IllegalArgumentException("Invalid format " + period);
+      }
+    }
+
+    private void addTestData() {
+      String id = xmlParserHelper.getRequiredAttribute("id");
+
+      goToTag("TestMethod");
+
+      String dllLocation = xmlParserHelper.getRequiredAttribute("codeBase");
+      String className = xmlParserHelper.getRequiredAttribute("className");
+
+      String projectName = extractProjectName(dllLocation);
+      unitTestResults.setClassNameOfTestResult(id, className, projectName);
+    }
+
+    private void goToTag(String tagName) {
+      String readTagName;
+      while ((readTagName = xmlParserHelper.nextTag()) != null) {
+        if (tagName.equals(readTagName)) {
+          break;
+        }
+      }
+    }
+
+    private static String extractProjectName(String dllLocation) {
+      File dllFile = new File(dllLocation);
+      return FilenameUtils.getBaseName(dllFile.getName());
+    }
+  }
 }

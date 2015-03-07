@@ -19,13 +19,20 @@
  */
 package org.sonar.plugins.dotnet.tests;
 
-public class UnitTestResults {
+import org.sonar.api.test.TestCase;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
+public class UnitTestResults {
   private int tests;
   private int passed;
   private int skipped;
   private int failures;
   private int errors;
+  private long totalExecutionTimeInMilliseconds;
+  private Map<String, UnitTestResult> resultsById = new HashMap<String, UnitTestResult>();
 
   public void add(int tests, int passed, int skipped, int failures, int errors) {
     this.tests += tests;
@@ -33,6 +40,18 @@ public class UnitTestResults {
     this.skipped += skipped;
     this.failures += failures;
     this.errors += errors;
+  }
+
+  public void addTestResult(String id, String name, long milliseconds, TestCase.Status result) {
+    resultsById.put(id, new UnitTestResult(id, name, milliseconds, result));
+
+    this.totalExecutionTimeInMilliseconds += milliseconds;
+  }
+
+  public void setClassNameOfTestResult(String id, String className, String projectName) {
+    if(resultsById.containsKey(id)){
+      resultsById.get(id).setClassName(className, projectName);
+    }
   }
 
   public double tests() {
@@ -55,4 +74,11 @@ public class UnitTestResults {
     return errors;
   }
 
+  public long totalExecutionTimeInMilliseconds() {
+    return totalExecutionTimeInMilliseconds;
+  }
+
+  public Collection<UnitTestResult> results() {
+    return resultsById.values();
+  }
 }
