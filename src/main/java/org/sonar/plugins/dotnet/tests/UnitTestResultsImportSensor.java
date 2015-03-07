@@ -22,6 +22,7 @@ package org.sonar.plugins.dotnet.tests;
 import com.google.common.annotations.VisibleForTesting;
 import org.sonar.api.batch.Sensor;
 import org.sonar.api.batch.SensorContext;
+import org.sonar.api.component.ResourcePerspectives;
 import org.sonar.api.measures.CoreMetrics;
 import org.sonar.api.resources.Project;
 
@@ -31,9 +32,11 @@ public class UnitTestResultsImportSensor implements Sensor {
 
   private final WildcardPatternFileProvider wildcardPatternFileProvider = new WildcardPatternFileProvider(new File("."), File.separator);
   private final UnitTestResultsAggregator unitTestResultsAggregator;
+  private ResourcePerspectives perspectives;
 
-  public UnitTestResultsImportSensor(UnitTestResultsAggregator unitTestResultsAggregator) {
+  public UnitTestResultsImportSensor(UnitTestResultsAggregator unitTestResultsAggregator, ResourcePerspectives perspectives) {
     this.unitTestResultsAggregator = unitTestResultsAggregator;
+    this.perspectives = perspectives;
   }
 
   @Override
@@ -46,6 +49,9 @@ public class UnitTestResultsImportSensor implements Sensor {
     if (project.isRoot()) {
       analyze(context, new UnitTestResults());
     }
+
+    FileProvider fileprovider = new FileProvider(project, context);
+    analyzeProject(fileprovider, new UnitTestResults());
   }
 
   @VisibleForTesting
@@ -56,10 +62,19 @@ public class UnitTestResultsImportSensor implements Sensor {
     context.saveMeasure(CoreMetrics.TEST_ERRORS, aggregatedResults.errors());
     context.saveMeasure(CoreMetrics.TEST_FAILURES, aggregatedResults.failures());
     context.saveMeasure(CoreMetrics.SKIPPED_TESTS, aggregatedResults.skipped());
+    context.saveMeasure(CoreMetrics.TEST_EXECUTION_TIME, (double) aggregatedResults.totalExecutionTimeInMilliseconds());
 
     if (aggregatedResults.tests() > 0) {
       context.saveMeasure(CoreMetrics.TEST_SUCCESS_DENSITY, aggregatedResults.passedPercentage());
     }
   }
 
+  @VisibleForTesting
+  void analyzeProject(FileProvider fileprovider, UnitTestResults unitTestResults) {
+    UnitTestResults aggregatedResults = unitTestResultsAggregator.aggregate(wildcardPatternFileProvider, unitTestResults);
+
+    for (UnitTestResult unitTestResult : aggregatedResults.results()) {
+      unitTestResult.storeMeasure(perspectives, fileprovider);
+    }
+  }
 }

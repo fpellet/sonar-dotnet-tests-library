@@ -19,6 +19,8 @@
  */
 package org.sonar.plugins.dotnet.tests;
 
+import org.sonar.api.component.ResourcePerspectives;
+import org.sonar.api.test.MutableTestPlan;
 import org.sonar.api.test.TestCase;
 
 public class UnitTestResult {
@@ -45,6 +47,35 @@ public class UnitTestResult {
     this.projectName = projectName;
 
     return this;
+  }
+
+  public void storeMeasure(ResourcePerspectives perspectives, FileProvider fileProvider) {
+    org.sonar.api.resources.File resource = GetFile(fileProvider);
+    if (resource == null) {
+      return;
+    }
+
+    MutableTestPlan testPlan = perspectives.as(MutableTestPlan.class, resource);
+    if (testPlan == null) {
+      return;
+    }
+
+    testPlan.addTestCase(name)
+            .setDurationInMs(milliseconds)
+            .setStatus(result)
+            .setType(TestCase.TYPE_UNIT);
+  }
+
+  private org.sonar.api.resources.File GetFile(FileProvider fileProvider) {
+    if (projectName == null || className == null) {
+      return null;
+    }
+
+    String path = className.substring(projectName.length() + 1);
+    path = path.replace('.', '\\');
+
+    String fullPath = (projectName + "\\" + path + ".cs").replace('\\', '/');
+    return fileProvider.fromPath(fullPath);
   }
 
   @Override
