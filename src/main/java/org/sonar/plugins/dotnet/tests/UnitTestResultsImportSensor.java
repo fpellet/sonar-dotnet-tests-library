@@ -46,34 +46,32 @@ public class UnitTestResultsImportSensor implements Sensor {
 
   @Override
   public void analyse(Project project, SensorContext context) {
+    UnitTestResults aggregatedResults = unitTestResultsAggregator.aggregate(wildcardPatternFileProvider, new UnitTestResults());
+
     if (project.isRoot()) {
-      analyze(context, new UnitTestResults());
+      storeMeasureOfSolution(context, aggregatedResults);
     }
 
     FileProvider fileprovider = new FileProvider(project, context);
-    analyzeProject(fileprovider, new UnitTestResults());
+    storeMeasureOfAllTests(fileprovider, aggregatedResults);
   }
 
   @VisibleForTesting
-  void analyze(SensorContext context, UnitTestResults unitTestResults) {
-    UnitTestResults aggregatedResults = unitTestResultsAggregator.aggregate(wildcardPatternFileProvider, unitTestResults);
+  void storeMeasureOfSolution(SensorContext context, UnitTestResults unitTestResults) {
+    context.saveMeasure(CoreMetrics.TESTS, unitTestResults.tests());
+    context.saveMeasure(CoreMetrics.TEST_ERRORS, unitTestResults.errors());
+    context.saveMeasure(CoreMetrics.TEST_FAILURES, unitTestResults.failures());
+    context.saveMeasure(CoreMetrics.SKIPPED_TESTS, unitTestResults.skipped());
+    context.saveMeasure(CoreMetrics.TEST_EXECUTION_TIME, (double) unitTestResults.totalExecutionTimeInMilliseconds());
 
-    context.saveMeasure(CoreMetrics.TESTS, aggregatedResults.tests());
-    context.saveMeasure(CoreMetrics.TEST_ERRORS, aggregatedResults.errors());
-    context.saveMeasure(CoreMetrics.TEST_FAILURES, aggregatedResults.failures());
-    context.saveMeasure(CoreMetrics.SKIPPED_TESTS, aggregatedResults.skipped());
-    context.saveMeasure(CoreMetrics.TEST_EXECUTION_TIME, (double) aggregatedResults.totalExecutionTimeInMilliseconds());
-
-    if (aggregatedResults.tests() > 0) {
-      context.saveMeasure(CoreMetrics.TEST_SUCCESS_DENSITY, aggregatedResults.passedPercentage());
+    if (unitTestResults.tests() > 0) {
+      context.saveMeasure(CoreMetrics.TEST_SUCCESS_DENSITY, unitTestResults.passedPercentage());
     }
   }
 
   @VisibleForTesting
-  void analyzeProject(FileProvider fileprovider, UnitTestResults unitTestResults) {
-    UnitTestResults aggregatedResults = unitTestResultsAggregator.aggregate(wildcardPatternFileProvider, unitTestResults);
-
-    for (UnitTestResult unitTestResult : aggregatedResults.results()) {
+  void storeMeasureOfAllTests(FileProvider fileprovider, UnitTestResults unitTestResults) {
+    for (UnitTestResult unitTestResult : unitTestResults.results()) {
       unitTestResult.storeMeasure(perspectives, fileprovider);
     }
   }

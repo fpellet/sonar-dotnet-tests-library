@@ -79,9 +79,7 @@ public class UnitTestResultsImportSensorTest {
 
     when(unitTestResultsAggregator.aggregate(Mockito.any(WildcardPatternFileProvider.class), Mockito.any(UnitTestResults.class))).thenReturn(results);
 
-    new UnitTestResultsImportSensor(unitTestResultsAggregator, perspectives).analyze(context, results);
-
-    verify(unitTestResultsAggregator).aggregate(Mockito.any(WildcardPatternFileProvider.class), Mockito.eq(results));
+    new UnitTestResultsImportSensor(unitTestResultsAggregator, perspectives).storeMeasureOfSolution(context, results);
 
     verify(context).saveMeasure(CoreMetrics.TESTS, 42.0);
     verify(context).saveMeasure(CoreMetrics.TEST_SUCCESS_DENSITY, 84.0);
@@ -103,9 +101,8 @@ public class UnitTestResultsImportSensorTest {
     when(results.errors()).thenReturn(3.0);
     when(unitTestResultsAggregator.aggregate(Mockito.any(WildcardPatternFileProvider.class), Mockito.any(UnitTestResults.class))).thenReturn(results);
 
-    new UnitTestResultsImportSensor(unitTestResultsAggregator, perspectives).analyze(context, results);
+    new UnitTestResultsImportSensor(unitTestResultsAggregator, perspectives).storeMeasureOfSolution(context, results);
 
-    verify(unitTestResultsAggregator).aggregate(Mockito.any(WildcardPatternFileProvider.class), Mockito.eq(results));
     verify(context).saveMeasure(CoreMetrics.TESTS, 0.0);
     verify(context).saveMeasure(CoreMetrics.SKIPPED_TESTS, 1.0);
     verify(context).saveMeasure(CoreMetrics.TEST_FAILURES, 2.0);
@@ -190,7 +187,7 @@ public class UnitTestResultsImportSensorTest {
     FileProvider fileProvider = mock(FileProvider.class);
     when(fileProvider.fromPath(eq("ProjectA/ClassA.cs"))).thenReturn(file);
 
-    new UnitTestResultsImportSensor(unitTestResultsAggregator, perspectives).analyzeProject(fileProvider, results);
+    new UnitTestResultsImportSensor(unitTestResultsAggregator, perspectives).storeMeasureOfAllTests(fileProvider, results);
 
     verify(testPlan).addTestCase("NameA");
   }
@@ -211,7 +208,7 @@ public class UnitTestResultsImportSensorTest {
 
     FileProvider fileProvider = mock(FileProvider.class);
 
-    new UnitTestResultsImportSensor(unitTestResultsAggregator, perspectives).analyzeProject(fileProvider, results);
+    new UnitTestResultsImportSensor(unitTestResultsAggregator, perspectives).storeMeasureOfAllTests(fileProvider, results);
 
     verifyZeroInteractions(testPlan);
   }
@@ -233,7 +230,7 @@ public class UnitTestResultsImportSensorTest {
     FileProvider fileProvider = mock(FileProvider.class);
     when(fileProvider.fromPath(any(String.class))).thenReturn(null);
 
-    new UnitTestResultsImportSensor(unitTestResultsAggregator, perspectives).analyzeProject(fileProvider, results);
+    new UnitTestResultsImportSensor(unitTestResultsAggregator, perspectives).storeMeasureOfAllTests(fileProvider, results);
 
     verifyZeroInteractions(testPlan);
   }

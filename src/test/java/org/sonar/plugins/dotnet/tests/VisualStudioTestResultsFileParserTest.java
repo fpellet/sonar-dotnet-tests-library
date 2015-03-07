@@ -77,7 +77,7 @@ public class VisualStudioTestResultsFileParserTest {
 
     assertThat(results.results()).containsOnly(
             new UnitTestResult("9b0965bb-327d-daf9-eaff-02f24887090f", "TestMethod2", 2, TestCase.Status.OK).setClassName("UnitTestProject1.UnitTest2", "UnitTestProject1"),
-            new UnitTestResult("44965739-95f2-fb30-3692-c73c2e9675e6", "TestMethod3", 3, TestCase.Status.OK).setClassName("UnitTestProject1.UnitTest2", "UnitTestProject1"),
+            new UnitTestResult("44965739-95f2-fb30-3692-c73c2e9675e6", "TestMethod3", 3, TestCase.Status.ERROR).setClassName("UnitTestProject1.UnitTest2", "UnitTestProject1"),
             new UnitTestResult("fd1a9d66-d059-cd84-23d7-f655dce255f5", "TestMethod1", 0, TestCase.Status.OK).setClassName("UnitTestProject1.UnitTest1", "UnitTestProject1"));
   }
 }
