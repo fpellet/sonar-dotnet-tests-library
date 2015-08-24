@@ -106,11 +106,11 @@ public class VisualStudioTestResultsFileParser implements UnitTestResultsParser 
     private void addTestResult() {
       String id = xmlParserHelper.getRequiredAttribute("testId");
       String name = xmlParserHelper.getRequiredAttribute("testName");
-      String durationFormatted = xmlParserHelper.getRequiredAttribute("duration");
+      String durationFormatted = xmlParserHelper.getAttribute("duration");
       String resultFormatted = xmlParserHelper.getRequiredAttribute("outcome"); // Passed, Failed
 
       TestCase.Status result = resultFormatted.compareToIgnoreCase("Passed") == 0 ? TestCase.Status.OK : TestCase.Status.ERROR;
-      long milliseconds = parseDurationInMilliseconds(durationFormatted);
+      long milliseconds = durationFormatted == null ? 0 : parseDurationInMilliseconds(durationFormatted);
 
       unitTestResults.addTestResult(id, name, milliseconds, result);
     }
